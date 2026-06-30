@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# ── Configuración de página ──────────────────────────────────────
+# ── Configuración de página ────────────────────────────────────────
 st.set_page_config(
     page_title="Riesgo Cardiovascular",
     page_icon="🫀",
@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── Estilos ───────────────────────────────────────────────────────
+# ── Estilos ─────────────────────────────────────────────────────────
 st.markdown("""
 <style>
     .metric-card {
@@ -43,43 +43,37 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Carga de datos ────────────────────────────────────────────────
+# ── Carga de datos ──────────────────────────────────────────────────
 @st.cache_data
 def cargar_datos():
-    rutas = [
-        '../Data/processed/processed.csv',
-        '../Data/cardio_train.csv',
-    ]
-    for ruta in rutas:
-        if os.path.exists(ruta):
-            sep = ';' if ruta.endswith('cardio_train.csv') else ','
-            df = pd.read_csv(ruta, sep=sep)
-            if 'age' in df.columns and 'age_years' not in df.columns:
-                df['age_years'] = (df['age'] / 365.25).round(1)
-            if 'id' in df.columns:
-                df = df.drop(columns=['id'])
-            return df
-    st.error("No se encontró el dataset.")
-    st.stop()
+    ruta = '../Data/processed/processed.csv'
+
+    if not os.path.exists(ruta):
+        st.error(f"No se encontró el archivo en: {ruta}")
+        st.stop()
+
+    df = pd.read_csv(ruta)
+    return df
 
 df = cargar_datos()
 
-# ── Sidebar con filtros ──────────────────────────────────────────
+# ── Sidebar con filtros ──────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🫀 Filtros")
 
     rango_edad = st.slider(
         "Edad (años)",
         int(df['age_years'].min()),
-        int(df['age_years'].max()),
-        (int(df['age_years'].min()), int(df['age_years'].max()))
+        int(np.ceil(df['age_years'].max())),     # ← FIX 1: ceil en vez de int truncado
+        (int(df['age_years'].min()), int(np.ceil(df['age_years'].max())))
     )
 
     genero_sel     = st.selectbox("Género",     ['Todos', 'Mujer', 'Hombre'])
-    cardio_sel     = st.selectbox("Cardio",     ['Todos', 'Sin enfermedad (0)', 'Con enfermedad (1)'])
     colesterol_sel = st.selectbox("Colesterol", ['Todos', 'Normal', 'Alto', 'Muy alto'])
+    # ← FIX 2: se eliminó el selectbox de "Cardio" — no tiene sentido filtrar
+    #          por la variable que se está estudiando y comparando
 
-# ── Aplicar filtros ───────────────────────────────────────────────
+# ── Aplicar filtros (sin filtro de cardio) ───────────────────────────
 dff = df.copy()
 dff = dff[(dff['age_years'] >= rango_edad[0]) & (dff['age_years'] <= rango_edad[1])]
 
@@ -88,11 +82,6 @@ if genero_sel == 'Mujer':
 elif genero_sel == 'Hombre':
     dff = dff[dff['gender'] == 2]
 
-if cardio_sel == 'Sin enfermedad (0)':
-    dff = dff[dff['cardio'] == 0]
-elif cardio_sel == 'Con enfermedad (1)':
-    dff = dff[dff['cardio'] == 1]
-
 if colesterol_sel == 'Normal':
     dff = dff[dff['cholesterol'] == 1]
 elif colesterol_sel == 'Alto':
@@ -100,7 +89,7 @@ elif colesterol_sel == 'Alto':
 elif colesterol_sel == 'Muy alto':
     dff = dff[dff['cholesterol'] == 3]
 
-# ── Métricas ──────────────────────────────────────────────────────
+# ── Métricas ───────────────────────────────────────────────────────
 tasa_cardio = dff['cardio'].astype(int).mean() * 100
 media_edad  = dff['age_years'].mean()
 media_ap_hi = dff['ap_hi'].mean()
@@ -128,7 +117,7 @@ c3.markdown(f"""
     <div class="metric-sub">años</div>
 </div>""", unsafe_allow_html=True)
 
-# ── Tabs (se crean ANTES de usarse) ───────────────────────────────
+# ── Tabs ──────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Variable objetivo",
     "📈 Numéricas",
