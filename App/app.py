@@ -5,12 +5,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
+# ── Configuración de página ──────────────────────────────────────
 st.set_page_config(
     page_title="Riesgo Cardiovascular",
     page_icon="🫀",
-    layout="wide",                  # ocupa todo el ancho de la pantalla
+    layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ── Estilos ───────────────────────────────────────────────────────
 st.markdown("""
 <style>
     .metric-card {
@@ -37,17 +40,11 @@ st.markdown("""
         color: #6c7086;
         margin-top: 2px;
     }
-    .section-title {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: #cdd6f4;
-        border-left: 3px solid #cba6f7;
-        padding-left: 10px;
-        margin-bottom: 1rem;
-    }
 </style>
 """, unsafe_allow_html=True)
-@st.cache_data                      # ← guarda en memoria, no recarga en cada interacción
+
+# ── Carga de datos ────────────────────────────────────────────────
+@st.cache_data
 def cargar_datos():
     rutas = [
         '../Data/processed/processed.csv',
@@ -57,7 +54,6 @@ def cargar_datos():
         if os.path.exists(ruta):
             sep = ';' if ruta.endswith('cardio_train.csv') else ','
             df = pd.read_csv(ruta, sep=sep)
-            # limpieza mínima si viene del raw
             if 'age' in df.columns and 'age_years' not in df.columns:
                 df['age_years'] = (df['age'] / 365.25).round(1)
             if 'id' in df.columns:
@@ -67,6 +63,8 @@ def cargar_datos():
     st.stop()
 
 df = cargar_datos()
+
+# ── Sidebar con filtros ──────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🫀 Filtros")
 
@@ -74,15 +72,15 @@ with st.sidebar:
         "Edad (años)",
         int(df['age_years'].min()),
         int(df['age_years'].max()),
-        (int(df['age_years'].min()), int(df['age_years'].max()))  # valor inicial = rango completo
+        (int(df['age_years'].min()), int(df['age_years'].max()))
     )
 
     genero_sel     = st.selectbox("Género",     ['Todos', 'Mujer', 'Hombre'])
     cardio_sel     = st.selectbox("Cardio",     ['Todos', 'Sin enfermedad (0)', 'Con enfermedad (1)'])
     colesterol_sel = st.selectbox("Colesterol", ['Todos', 'Normal', 'Alto', 'Muy alto'])
 
-    dff = df.copy()      # dff = dataframe filtrado, df = original sin tocar
-
+# ── Aplicar filtros ───────────────────────────────────────────────
+dff = df.copy()
 dff = dff[(dff['age_years'] >= rango_edad[0]) & (dff['age_years'] <= rango_edad[1])]
 
 if genero_sel == 'Mujer':
@@ -95,11 +93,19 @@ if cardio_sel == 'Sin enfermedad (0)':
 elif cardio_sel == 'Con enfermedad (1)':
     dff = dff[dff['cardio'] == 1]
 
-    tasa_cardio = dff['cardio'].astype(int).mean() * 100
+if colesterol_sel == 'Normal':
+    dff = dff[dff['cholesterol'] == 1]
+elif colesterol_sel == 'Alto':
+    dff = dff[dff['cholesterol'] == 2]
+elif colesterol_sel == 'Muy alto':
+    dff = dff[dff['cholesterol'] == 3]
+
+# ── Métricas ──────────────────────────────────────────────────────
+tasa_cardio = dff['cardio'].astype(int).mean() * 100
 media_edad  = dff['age_years'].mean()
 media_ap_hi = dff['ap_hi'].mean()
 
-c1, c2, c3 = st.columns(3)     # divide la pantalla en 3 columnas iguales
+c1, c2, c3 = st.columns(3)
 
 c1.markdown(f"""
 <div class="metric-card">
@@ -110,6 +116,7 @@ c1.markdown(f"""
 
 c2.markdown(f"""
 <div class="metric-card">
+    <div class="metric-value">{tasa_cardio:.1f}%</div>
     <div class="metric-label">Tasa cardio=1</div>
     <div class="metric-sub">con enfermedad</div>
 </div>""", unsafe_allow_html=True)
@@ -121,6 +128,7 @@ c3.markdown(f"""
     <div class="metric-sub">años</div>
 </div>""", unsafe_allow_html=True)
 
+# ── Tabs (se crean ANTES de usarse) ───────────────────────────────
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Variable objetivo",
     "📈 Numéricas",
@@ -129,12 +137,19 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 with tab1:
-    # todo lo que pongas aquí aparece solo cuando el usuario hace clic en esta pestaña
     conteo = dff['cardio'].astype(int).value_counts().sort_index()
     fig, ax = plt.subplots(figsize=(5, 4))
     ax.bar(['Sin enfermedad', 'Con enfermedad'], conteo.values, color=['#89b4fa', '#f38ba8'])
-    st.pyplot(fig)          # ← así se muestra un gráfico matplotlib en Streamlit
-    plt.close()             # ← siempre cerrar para liberar memoria
+    st.pyplot(fig)
+    plt.close()
+
+    ratio = conteo.max() / conteo.min()
+    if ratio < 1.5:
+        st.success(f"✓ Dataset balanceado (ratio {ratio:.2f})")
+    elif ratio < 3:
+        st.warning(f"⚠ Leve desequilibrio (ratio {ratio:.2f})")
+    else:
+        st.error(f"✗ Desequilibrio severo (ratio {ratio:.2f})")
 
 with tab2:
     variable = st.selectbox("Variable", ['age_years', 'weight', 'ap_hi', 'ap_lo', 'bmi'])
@@ -145,11 +160,73 @@ with tab2:
     st.pyplot(fig)
     plt.close()
 
-    ratio = conteo.max() / conteo.min()
+with tab3:
+    cols_cat = ['gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active']
+    etiquetas = {
+        'gender':      {1: 'Mujer', 2: 'Hombre'},
+        'cholesterol': {1: 'Normal', 2: 'Alto', 3: 'Muy alto'},
+        'gluc':        {1: 'Normal', 2: 'Alto', 3: 'Muy alto'},
+        'smoke':       {0: 'No fuma', 1: 'Fuma'},
+        'alco':        {0: 'No bebe', 1: 'Bebe'},
+        'active':      {0: 'Sedentario', 1: 'Activo'},
+    }
+    nombres = {
+        'gender': 'Género', 'cholesterol': 'Colesterol', 'gluc': 'Glucosa',
+        'smoke': 'Tabaco', 'alco': 'Alcohol', 'active': 'Actividad física'
+    }
 
-if ratio < 1.5:
-    st.success(f"✓ Dataset balanceado (ratio {ratio:.2f})")   # verde
-elif ratio < 3:
-    st.warning(f"⚠ Leve desequilibrio (ratio {ratio:.2f})")   # amarillo
-else:
-    st.error(f"✗ Desequilibrio severo (ratio {ratio:.2f})")   # rojo
+    st.markdown("Tasa de enfermedad cardiovascular por categoría")
+
+    media_global = dff['cardio'].astype(int).mean() * 100
+
+    fig, axes = plt.subplots(2, 3, figsize=(14, 8))
+
+    for ax, col in zip(axes.flatten(), cols_cat):
+        tasa = dff.groupby(col)['cardio'].apply(lambda x: x.astype(int).mean() * 100)
+        etiq = [etiquetas[col].get(k, str(k)) for k in tasa.index]
+        colores = ['#f38ba8' if v > media_global else '#89b4fa' for v in tasa.values]
+
+        bars = ax.bar(etiq, tasa.values, color=colores, edgecolor='white')
+        ax.axhline(media_global, color='gray', linestyle='--', linewidth=1.2,
+                   label=f'Media: {media_global:.1f}%')
+
+        for bar, val in zip(bars, tasa.values):
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.8,
+                    f'{val:.1f}%', ha='center', fontsize=8)
+
+        ax.set_title(nombres[col])
+        ax.set_ylabel('% cardio=1')
+        ax.set_ylim(0, 85)
+        ax.legend(fontsize=7)
+
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
+
+with tab4:
+    cols_corr = ['age_years', 'height', 'weight', 'ap_hi', 'ap_lo', 'bmi',
+                 'cholesterol', 'gluc', 'smoke', 'alco', 'active', 'cardio']
+
+    corr = dff[cols_corr].astype(float).corr()
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+
+    st.markdown("Mapa de correlaciones")
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(corr, mask=mask, annot=True, fmt='.2f',
+                cmap='coolwarm', center=0, vmin=-1, vmax=1,
+                square=True, linewidths=0.5, ax=ax)
+    st.pyplot(fig)
+    plt.close()
+
+    st.markdown("Correlación de cada variable con cardio")
+
+    corr_target = corr['cardio'].drop('cardio').sort_values(ascending=False)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    colores_bar = ['#f38ba8' if v > 0 else '#89b4fa' for v in corr_target.values]
+    ax.barh(corr_target.index, corr_target.values, color=colores_bar)
+    ax.axvline(0, color='gray', linewidth=0.8)
+    ax.set_xlabel('Correlación con cardio')
+    st.pyplot(fig)
+    plt.close()
