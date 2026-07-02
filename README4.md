@@ -2,7 +2,7 @@
 
 Proyecto de análisis de datos y machine learning para predecir la presencia de enfermedad cardiovascular a partir de variables clínicas y de estilo de vida.
 
-🔗 **App en vivo:** _añadir enlace tras desplegar en Streamlit Cloud_
+🔗 **App en vivo:** http://localhost:8503
 
 ---
 
