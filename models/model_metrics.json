@@ -1,0 +1,55 @@
+{
+  "total_registros": 67514,
+  "train_samples": 54011,
+  "test_samples": 13503,
+  "accuracy": 0.7307,
+  "precision": 0.7509,
+  "recall": 0.686,
+  "f1": 0.717,
+  "roc_auc": 0.7989,
+  "roc_auc_lr": 0.7869,
+  "confusion_matrix": [
+    [
+      5261,
+      1528
+    ],
+    [
+      2108,
+      4606
+    ]
+  ],
+  "features_numericas": [
+    "age_years",
+    "height",
+    "weight",
+    "ap_hi",
+    "ap_lo",
+    "bmi",
+    "pulse_pressure",
+    "map"
+  ],
+  "features_categoricas": [
+    "gender",
+    "cholesterol",
+    "gluc",
+    "smoke",
+    "alco",
+    "active"
+  ],
+  "coeficientes_logisticos": {
+    "cholesterol": 0.4997,
+    "age_years": 0.3472,
+    "ap_hi": 0.3263,
+    "pulse_pressure": 0.3235,
+    "map": 0.3178,
+    "alco": -0.2355,
+    "active": -0.2317,
+    "weight": 0.1811,
+    "ap_lo": 0.1806,
+    "smoke": -0.1715,
+    "gluc": -0.1199,
+    "height": -0.0436,
+    "bmi": -0.0327,
+    "gender": -0.0142
+  }
+}
