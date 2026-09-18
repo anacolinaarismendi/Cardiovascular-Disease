@@ -7,6 +7,13 @@ import seaborn as sns
 import os
 import json
 import joblib
+from scipy import stats
+
+def calcular_percentil(serie, valor):
+    try:
+        return float(stats.percentileofscore(serie, valor))
+    except Exception:
+        return float((serie <= valor).mean() * 100)
 
 # ── Configuración de la página ─────────────────────────────────────
 st.set_page_config(
@@ -567,7 +574,7 @@ with tab_pop:
 
     with cp1:
         # Comparación Presión Sistólica
-        pct_hi = stats.percentileofscore(df['ap_hi'], p_ap_hi)
+        pct_hi = calcular_percentil(df['ap_hi'], p_ap_hi)
         fig, ax = plt.subplots(figsize=(6, 3.8))
         sns.kdeplot(df[df['cardio']==0]['ap_hi'], ax=ax, color=SAFE, fill=True, alpha=0.35, label='Sin enfermedad (cardio=0)')
         sns.kdeplot(df[df['cardio']==1]['ap_hi'], ax=ax, color=RISK, fill=True, alpha=0.35, label='Con enfermedad (cardio=1)')
@@ -582,7 +589,7 @@ with tab_pop:
 
     with cp2:
         # Comparación IMC
-        pct_bmi = stats.percentileofscore(df['bmi'], p_bmi)
+        pct_bmi = calcular_percentil(df['bmi'], p_bmi)
         fig, ax = plt.subplots(figsize=(6, 3.8))
         sns.kdeplot(df[df['cardio']==0]['bmi'], ax=ax, color=SAFE, fill=True, alpha=0.35, label='Sin enfermedad')
         sns.kdeplot(df[df['cardio']==1]['bmi'], ax=ax, color=RISK, fill=True, alpha=0.35, label='Con enfermedad')
@@ -600,11 +607,11 @@ with tab_pop:
         'Biomarcador': ['Presión Sistólica (ap_hi)', 'Presión Diastólica (ap_lo)', 'Presión de Pulso (PP)', 'Índice Masa Corporal (IMC)', 'Edad'],
         'Valor Paciente': [f"{p_ap_hi} mmHg", f"{p_ap_lo} mmHg", f"{p_pp} mmHg", f"{p_bmi} kg/m²", f"{p_edad} años"],
         'Percentil Poblacional': [
-            f"P{stats.percentileofscore(df['ap_hi'], p_ap_hi):.1f}",
-            f"P{stats.percentileofscore(df['ap_lo'], p_ap_lo):.1f}",
-            f"P{stats.percentileofscore(df['pulse_pressure'], p_pp):.1f}",
-            f"P{stats.percentileofscore(df['bmi'], p_bmi):.1f}",
-            f"P{stats.percentileofscore(df['age_years'], p_edad):.1f}"
+            f"P{calcular_percentil(df['ap_hi'], p_ap_hi):.1f}",
+            f"P{calcular_percentil(df['ap_lo'], p_ap_lo):.1f}",
+            f"P{calcular_percentil(df['pulse_pressure'], p_pp):.1f}",
+            f"P{calcular_percentil(df['bmi'], p_bmi):.1f}",
+            f"P{calcular_percentil(df['age_years'], p_edad):.1f}"
         ],
         'Media Población Sana': [
             f"{df[df['cardio']==0]['ap_hi'].mean():.1f} mmHg",
