@@ -720,23 +720,35 @@ with tab_num:
 
     with col_v:
         fig, ax = plt.subplots(figsize=(6.5, 4.2))
-        sns.violinplot(
-            data=dff, x='cardio', y=variable, ax=ax,
-            palette={0: SAFE, 1: RISK}, inner='box', linewidth=1.0
-        )
-        ax.set_xticks([0, 1])
-        ax.set_xticklabels(['Sin enfermedad', 'Con enfermedad'])
-        m0 = dff[dff['cardio']==0][variable].mean()
-        m1 = dff[dff['cardio']==1][variable].mean()
-        ax.axhline(m0, color=SAFE, linestyle='--', alpha=0.7, linewidth=1.3)
-        ax.axhline(m1, color=RISK, linestyle='--', alpha=0.7, linewidth=1.3)
+        palette_dict = {0: SAFE, 1: RISK, '0': SAFE, '1': RISK}
+        if len(dff) > 0 and dff['cardio'].nunique() > 1:
+            sns.violinplot(
+                data=dff, x='cardio', y=variable, hue='cardio', ax=ax,
+                palette=palette_dict, inner='box', linewidth=1.0, legend=False
+            )
+            ax.set_xticks([0, 1])
+            ax.set_xticklabels(['Sin enfermedad (0)', 'Con enfermedad (1)'])
+        elif len(dff) > 0:
+            sns.violinplot(
+                data=dff, x='cardio', y=variable, ax=ax,
+                color=SAFE if dff['cardio'].iloc[0] == 0 else RISK,
+                inner='box', linewidth=1.0
+            )
+
+        m0 = dff[dff['cardio']==0][variable].mean() if (dff['cardio']==0).any() else 0
+        m1 = dff[dff['cardio']==1][variable].mean() if (dff['cardio']==1).any() else 0
+        if (dff['cardio']==0).any():
+            ax.axhline(m0, color=SAFE, linestyle='--', alpha=0.7, linewidth=1.3)
+        if (dff['cardio']==1).any():
+            ax.axhline(m1, color=RISK, linestyle='--', alpha=0.7, linewidth=1.3)
+
         ax.set_title(f'Media Sanos: {m0:.1f}  |  Media Enfermos: {m1:.1f}', color=TEXT_HI, pad=10)
         ax.set_xlabel('')
         plt.tight_layout()
         st.pyplot(fig)
         plt.close()
 
-        diff = abs(m1 - m0) / m0 * 100
+        diff = abs(m1 - m0) / m0 * 100 if m0 != 0 else 0
         st.info(f"📌 **Diferencia relativa entre grupos:** `{diff:.1f}%`. Variable con fuerte discriminación pronóstica.")
 
 
