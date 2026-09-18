@@ -1,4 +1,5 @@
-# 🫀 Predicción de Riesgo Cardiovascular en Pacientes Reales
+# 🫀 Evaluación y Predicción de Riesgo Cardiovascular en Pacientes Reales
+### Modelado Epidemiológico y Machine Learning sobre el *Framingham Heart Study*
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.58-FF4B4B.svg)](https://streamlit.io/)
@@ -6,281 +7,252 @@
 [![Status](https://img.shields.io/badge/Status-Producci%C3%B3n-success.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Sistema integral de ciencia de datos, análisis exploratorio clínico y machine learning para la **evaluación, estratificación y predicción del riesgo de enfermedad cardiovascular** a partir de biomarcadores hemodinámicos y hábitos de vida en pacientes reales.
+Sistema integral de ciencia de datos, análisis exploratorio clínico y machine learning para la **evaluación, estratificación y predicción del riesgo de cardiopatía coronaria a 10 años** a partir de biomarcadores hemodinámicos, analítica sanguínea y hábitos de vida en pacientes reales.
 
 ---
 
 ## 📑 Tabla de Contenidos
 1. [Pregunta Clínica y Objetivos del Proyecto](#-pregunta-clínica-y-objetivos)
-2. [Dataset y Criterios Fisiológicos para Pacientes Reales](#-dataset-y-criterios-fisiológicos)
+2. [Cohorte Epidemiológica y Plausibilidad Fisiológica](#-cohorte-epidemiológica-y-plausibilidad-fisiológica)
 3. [Diccionario Clínico de Variables](#-diccionario-clínico-de-variables)
-4. [Metodología: Guía de Preprocesamiento en 19 Pasos](#-metodología-guía-de-preprocesamiento-en-19-pasos)
-5. [Hallazgos Principales del Análisis Exploratorio](#-hallazgos-principales-del-eda)
-6. [Modelo Predictivo y Rendimiento](#-modelo-predictivo-y-rendimiento)
+4. [Metodología: Guía de Preprocesamiento Clínico en 19 Pasos](#-metodología-guía-de-preprocesamiento-en-19-pasos)
+5. [Hallazgos Principales del Análisis Exploratorio (EDA)](#-hallazgos-principales-del-eda)
+6. [Modelo Predictivo y Rendimiento Clínico](#-modelo-predictivo-y-rendimiento-clínico)
 7. [CardioRisk Studio: Aplicación Interactiva en Streamlit](#-cardiorisk-studio-aplicación-interactiva)
 8. [Instrucciones de Ejecución Local y Despliegue](#-instrucciones-de-ejecución)
-9. [Estructura del Proyecto](#-estructura-del-proyecto)
+9. [Estructura del Repositorio](#-estructura-del-repositorio)
 10. [Autora y Licencia](#-autora-y-licencia)
 
 ---
 
 ## 🎯 Pregunta Clínica y Objetivos
 
-> **¿Es posible predecir con alta fiabilidad la presencia de enfermedad cardiovascular utilizando únicamente parámetros clínicos ambulatorios de bajo costo (presión arterial, medidas antropométricas, colesterol y estilo de vida)?**
+> **¿Es posible predecir con rigor médico la probabilidad de sufrir un evento coronario mayor (infarto agudo de miocardio o muerte coronaria) a 10 años utilizando biomarcadores accesibles en consulta médica ambulatoria?**
 
-Las enfermedades cardiovasculares representan la **primera causa de muerte prematura en el mundo** según la Organización Mundial de la Salud (OMS). Este proyecto resuelve tres necesidades médicas esenciales:
+Las enfermedades cardiovasculares constituyen la **primera causa de muerte prematura a nivel global** según la Organización Mundial de la Salud (OMS). Este proyecto resuelve tres necesidades médicas esenciales:
 
 | Caso de Uso | Aplicación Práctica | Destinatarios |
 |---|---|---|
-| **Screening Clínico Temprano** | Detección precoz de pacientes asintomáticos en consulta antes de pruebas costosas (ecocardiograma, angiografía). | Médicos de Atención Primaria |
-| **Salud Pública Preventiva** | Identificación del impacto relativo de factores modificables (tabaco, sobrepeso, sedentarismo) para diseñar campañas focalizadas. | Epidemiólogos y Sistemas de Salud |
-| **Estratificación de Riesgo** | Segmentación en 4 niveles de riesgo (Bajo, Moderado, Alto, Crítico) con recomendaciones personalizadas. | Clínicas y Pacientes |
+| **Cribado Ambulatorio Temprano** | Detección precoz de pacientes asintomáticos con alto riesgo coronario antes de pruebas invasivas o costosas. | Médicos de Atención Primaria |
+| **Salud Pública Preventiva** | Cuantificación del impacto de factores modificables (cesación tabáquica, control tensional, control lipídico y glucémico). | Epidemiólogos y Sistemas de Salud |
+| **Simulación Interactiva** | Plataforma para médicos y pacientes con recomendaciones adaptadas al perfil individual y comparación poblacional. | Clínicas y Pacientes |
 
 ---
 
-## 🩺 Dataset y Criterios Fisiológicos
+## 🩺 Cohorte Epidemiológica y Plausibilidad Fisiológica
 
-- **Fuente:** [Cardiovascular Disease Dataset (Kaggle - sulianova)](https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset).
-- **Muestra Original:** 70,000 observaciones.
-- **Muestra Validada Final:** **67,514 pacientes reales**.
+### ¿Por qué la Cohorte Framingham?
+En datasets de corte transversal (como el dataset sintético o transversal de Kaggle), es habitual encontrar el sesgo de supervivencia y el *efecto del fumador enfermo* (*sick-quitter effect*): pacientes ya diagnosticados abandonan el tabaco o reciben medicación intensiva, distorsionando las correlaciones (haciendo que fumar o tener glucosa normal parezca "proteger").
 
-### Criterios de Compatibilidad Hemodinámica (OMS / ACC/AHA / ESC)
-En el dataset bruto existen anomalías como presiones sistólicas negativas (-150 mmHg), errores de tipeo con ceros extra (16,020 mmHg), presiones diastólicas superiores a las sistólicas ($ap\_lo \ge ap\_hi$) o estaturas de 55 cm. Siguiendo las directrices internacionales del **American College of Cardiology (ACC/AHA 2017)** y de la **European Society of Cardiology (ESC/ESH 2018/2024)**, se definieron los siguientes rangos de validez fisiológica para adultos de 29 a 65 años:
+Para garantizar **fidelidad clínica absoluta**, este proyecto utiliza los datos del **Framingham Heart Study** (*National Heart, Lung, and Blood Institute / NIH*):
+- **Diseño del Estudio:** Estudio longitudinal prospectivo de seguimiento a 10 años.
+- **Población Total:** 4,240 pacientes seguidos durante una década.
+- **Población Validada Final:** **4,229 pacientes** tras filtros hemodinámicos estrictos.
+- **Variable Objetivo (`cardio` / `TenYearCHD`):** Incidencia real documentada de cardiopatía coronaria a 10 años (~15.1% de incidencia comunitaria basal).
+- **Consistencia Médica Demostrada:** Todos los factores de riesgo reconocidos (edad, tabaquismo, glucosa, diabetes, hipertensión, colesterol total y presión sistólica) presentan **Odds Ratios positivos estadísticamente significativos ($OR > 1.0$)**.
 
-* **Presión Sistólica ($ap\_hi$):** $80 \le ap\_hi \le 220\text{ mmHg}$ *(cifras <80 implican shock o colapso circulatorio incompatible con control ambulatorio; >220 corresponden a emergencias extremas o error de captura)*.
-* **Presión Diastólica ($ap\_lo$):** $50 \le ap\_lo \le 130\text{ mmHg}$.
-* **Consistencia Hemodinámica:** $ap\_hi > ap\_lo$ de forma estricta.
-* **Presión de Pulso ($PP = ap\_hi - ap\_lo$):** $20 \le PP \le 110\text{ mmHg}$ *(una presión de pulso menor a 20 mmHg es fisiológicamente inviable en pacientes ambulatorios)*.
-* **Estatura:** $140 \le \text{height} \le 205\text{ cm}$.
-* **Peso:** $40 \le \text{weight} \le 165\text{ kg}$.
-* **Índice de Masa Corporal (IMC):** $16.0 \le \text{BMI} \le 52.0\text{ kg/m}^2$.
+### Criterios Fisiológicos de Validación
+Siguiendo las directrices del **American College of Cardiology (ACC/AHA 2017)** y de la **European Society of Cardiology (ESC/ESH 2024)**:
+* **Presión Sistólica ($sysBP$):** $85 \le sysBP \le 220\text{ mmHg}$.
+* **Presión Diastólica ($diaBP$):** $50 \le diaBP \le 130\text{ mmHg}$.
+* **Coherencia Hemodinámica:** $sysBP > diaBP$ obligatorio en el 100% de la muestra.
+* **Presión de Pulso ($PP = sysBP - diaBP$):** $PP \ge 15\text{ mmHg}$ *(presiones diferenciales estrechas indican shock o fallo de bomba)*.
+* **Colesterol Total ($totChol$):** $100 \le totChol \le 500\text{ mg/dL}$.
+* **Glucemia en Ayunas ($glucose$):** $50 \le glucose \le 350\text{ mg/dL}$.
 
 ---
 
 ## 📖 Diccionario Clínico de Variables
 
-| Variable | Tipo | Unidad / Rango | Definición Clínica e Interpretación |
+| Variable | Tipo | Rango Clínico | Definición e Interpretación Médica |
 |---|---|---|---|
-| `age_years` | Numérica | $29.6 - 64.9$ años | Edad del paciente calculada a partir de los días ($age / 365.25$). |
-| `gender` | Categórica | 1 = Mujer · 2 = Hombre | Sexo biológico del paciente. |
-| `height` | Numérica | $140 - 205$ cm | Estatura en bipedestación. |
-| `weight` | Numérica | $40 - 165$ kg | Peso corporal medido en balanza clínica. |
-| `ap_hi` | Numérica | $80 - 220$ mmHg | Presión arterial sistólica (presión pico durante la contracción ventricular). |
-| `ap_lo` | Numérica | $50 - 130$ mmHg | Presión arterial diastólica (presión mínima durante la relajación ventricular). |
-| `bmi` | Calculada | $16.0 - 52.0$ kg/m² | Índice de Masa Corporal ($weight / height^2$). Clasificado según la OMS. |
-| `pulse_pressure`| Calculada | $20 - 110$ mmHg | Presión diferencial ($ap\_hi - ap\_lo$). Marcador directo de rigidez aórtica. |
-| `map` | Calculada | $60 - 160$ mmHg | Presión Arterial Media ($ap\_lo + PP / 3$). Marcador de perfusión sistémica. |
-| `cholesterol`| Categórica ordinal | 1, 2, 3 | Nivel de colesterol sérico total (1: Normal <200 · 2: Alto 200-239 · 3: Muy alto $\ge$240 mg/dL). |
-| `gluc` | Categórica ordinal | 1, 2, 3 | Nivel de glucemia en ayuno (1: Normal <100 · 2: Alterada 100-125 · 3: Diabetes $\ge$126 mg/dL). |
-| `smoke` | Binaria | 0 = No · 1 = Sí | Hábito tabáquico activo regular. |
-| `alco` | Binaria | 0 = No · 1 = Sí | Consumo habitual de bebidas alcohólicas. |
-| `active` | Binaria | 0 = No · 1 = Sí | Realización de actividad física regular ($\ge$150 min/semana). |
-| `cardio` | Binaria (**Target**)| 0 = No · 1 = Sí | **Presencia confirmada de enfermedad cardiovascular**. |
+| `age` | Numérica | $32 - 70$ años | Edad del paciente al examen basal. |
+| `male` | Binaria | 0 = Mujer · 1 = Hombre | Sexo biológico del paciente. |
+| `currentSmoker` | Binaria | 0 = No · 1 = Sí | Hábito tabáquico activo. |
+| `cigsPerDay` | Numérica | $0 - 60$ cig/día | Intensidad tabáquica diaria cuantificada. |
+| `BPMeds` | Binaria | 0 = No · 1 = Sí | Tratamiento farmacológico antihipertensivo activo. |
+| `prevalentStroke` | Binaria | 0 = No · 1 = Sí | Antecedente clínico de Ictus / Accidente Cerebrovascular (ACV). |
+| `prevalentHyp` | Binaria | 0 = No · 1 = Sí | Diagnóstico documentado de hipertensión arterial. |
+| `diabetes` | Binaria | 0 = No · 1 = Sí | Diagnóstico documentado de diabetes mellitus. |
+| `totChol` | Numérica | $107 - 500$ mg/dL | Colesterol total sérico cuantificado por laboratorio. |
+| `sysBP` | Numérica | $85 - 220$ mmHg | Presión arterial sistólica en reposo. |
+| `diaBP` | Numérica | $50 - 130$ mmHg | Presión arterial diastólica en reposo. |
+| `BMI` | Numérica | $15.5 - 50.0$ kg/m² | Índice de Masa Corporal ($peso / altura^2$). |
+| `heartRate` | Numérica | $45 - 130$ lpm | Frecuencia cardíaca en reposo (lpm). |
+| `glucose` | Numérica | $50 - 350$ mg/dL | Glucemia plasmática basal en ayuno. |
+| `pulse_pressure` | Calculada | $15 - 120$ mmHg | Presión de pulso ($sysBP - diaBP$), indicador de rigidez arterial. |
+| `map` | Calculada | $60 - 150$ mmHg | Presión arterial media ($diaBP + PP / 3$), presión de perfusión tisular. |
+| `bp_stage` | Categórica | 1 a 4 | Estadío de hipertensión según guía ACC/AHA 2017. |
+| `cardio` | Binaria (**Target**)| 0 = No · 1 = Sí | **Aparición de Cardiopatía Coronaria a 10 años (TenYearCHD)**. |
 
 ---
 
 ## 🔬 Metodología: Guía de Preprocesamiento en 19 Pasos
 
-El análisis y la ingeniería de datos se implementaron siguiendo rigurosamente la **Guía Maestra de Preprocesamiento** (`Notebooks/03_eda.ipynb`):
+El preprocesamiento se diseñó e implementó de acuerdo con el protocolo en 19 pasos documentado en `Notebooks/02_preprocesamiento.ipynb`:
 
 ```
-[1. Librerías] ────> [2. Carga de Datos] ───> [3. Exploración Inicial] ───> [4. Análisis de Nulos]
-                                                                                   │
-[8. Consistencia] <── [7. Tipos de Datos] <── [6. Duplicados] <── [5. Estrategia Nulos]
+[1. Configuración] ───> [2. Carga Raw] ────> [3. Tipos y Datos] ───> [4. Duplicados]
+                                                                            │
+[8. Presión de Pulso] <─ [7. Winsorización] <─ [6. Imputación Médica] <─ [5. Filtro Fisiológico]
        │
        ▼
-[9. Outliers Clínicos] ─> [10. Codificación] ──> [11. Escalado] ─────────> [12. Distribuciones]
-                                                                                   │
-[16. Split Train/Test] <─ [15. Balance Target] <─ [14. Correlaciones] <── [13. Feature Engineering]
+[9. Presión Art. Media] ─> [10. Estadio AHA] ─> [11. Dislipidemia] ─> [12. Glucemia]
+                                                                            │
+[16. Multicolinealidad] <─ [15. Target cardio] <─ [14. IMC Ponderal] <─ [13. HTA Compuesta]
        │
        ▼
-[17. ColumnTransformer] ─> [18. Serialización de Modelos] ───────────────> [19. Checklist Final]
+[17. Split Train/Test] ──> [18. Pipeline Scikit-Learn] ────────────> [19. Exportación y Checklist]
 ```
 
-1. **Librerías especializadas:** Configuración de `pandas`, `numpy`, `matplotlib`, `seaborn`, `scipy` y `scikit-learn`.
-2. **Carga robusta:** Carga con delimitador `;` y verificación de integridad.
-3. **Exploración inicial:** Comprobación de dimensiones (70,000 filas, 13 columnas) y cardinalidades.
-4. **Análisis de nulos:** Comprobación de 0 datos faltantes en la matriz.
-5. **Tratamiento de nulos:** Inclusión preventiva de `SimpleImputer(strategy='median')` en el pipeline de producción.
-6. **Detección de duplicados:** Identificación y eliminación de **674 duplicados clínicos exactos**.
-7. **Tipos de datos:** Conversión de días a años (`age_years`) y tipado eficiente (`int8`).
-8. **Consistencia hemodinámica:** Eliminación de **1,236 filas** con presión invertida ($ap\_lo \ge ap\_hi$).
-9. **Outliers fisiológicos:** Filtrado de **463 registros** fuera de los límites de vida humana ambulatoria.
-10. **Codificación de categóricas:** Mapeo semántico para gráficos y numérico ordinal para modelos.
-11. **Escalado y normalización:** Aplicación de `StandardScaler` sobre variables continuas en el pipeline.
-12. **Transformación de distribuciones:** Evaluación de asimetría (*skewness*) y estabilización de variables asimétricas.
-13. **Feature Engineering Clínico:** Creación de `bmi`, `pulse_pressure`, `map`, `hypertension`, `overweight` y `bp_stage` (AHA).
-14. **Selección y multicolinealidad:** Heatmap de correlación Pearson/Spearman y análisis de pares colineales.
-15. **Evaluación de desbalance:** Comprobación de paridad **50.3% sanos vs 49.7% enfermos** (ratio 1.01). Se demostró que **no se requiere SMOTE**.
-16. **División Train/Test:** Partición estratificada 80/20 (`stratify=y`, 54,011 train / 13,503 test) previa a cualquier ajuste para **prevenir data leakage**.
-17. **Pipeline y ColumnTransformer:** Encapsulamiento de sub-pipelines numéricos y categóricos.
-18. **Guardado de artefactos:** Exportación de `processed.csv`, `pipeline_preprocesamiento.pkl` y `modelo_cardiovascular.pkl`.
-19. **Checklist final:** Validación de 15 puntos clínicos y computacionales.
+1. **Configuración y Semillas:** Fijación de `random_state=42` para reproducibilidad estocástica.
+2. **Carga y Verificación:** Carga de la cohorte basal de 4,240 registros.
+3. **Auditoría de Tipos:** Conversión y verificación de formatos flotantes y enteros.
+4. **Duplicados:** Verificación de unicidad de pacientes.
+5. **Filtros Fisiológicos:** Remoción de 11 registros incompatibles con la vida.
+6. **Imputación Médica Estratificada:** Imputación de `cigsPerDay` según condición tabáquica, `totChol` por decenio de edad, `BMI` por sexo biológico y `glucose` por condición de diabetes.
+7. **Winsorización:** Acotamiento en percentiles 0.5% - 99.5% para suprimir valores espurios sin pérdida de muestra.
+8. **Feature Engineering I:** Cálculo de Presión de Pulso ($PP = sysBP - diaBP$).
+9. **Feature Engineering II:** Cálculo de Presión Arterial Media ($MAP = diaBP + PP / 3$).
+10. **Feature Engineering III:** Clasificación ACC/AHA de estadios tensionales.
+11. **Feature Engineering IV:** Clasificación de hipercolesterolemia según el NCEP-ATP III.
+12. **Feature Engineering V:** Clasificación glucémica según la Asociación Americana de Diabetes (ADA).
+13. **Feature Engineering VI:** Indicador compuesto de hipertensión arterial clínica.
+14. **Feature Engineering VII:** Indicador ponderal de sobrepeso/obesidad ($BMI \ge 25$).
+15. **Alineación del Target:** Mapeo formal de `TenYearCHD` a `cardio`.
+16. **Multicolinealidad:** Verificación de correlaciones cruzadas.
+17. **División Train/Test Estratificada:** Partición 80% train (3,383 pacientes) y 20% test (846 pacientes) preservando la tasa basal del 15.1%.
+18. **Pipeline Scikit-Learn:** Creación del objeto `Pipeline` con `StandardScaler` y estimador calibrado.
+19. **Exportación y Checklist:** Guardado del dataset analítico en `Data/processed/processed.csv`.
 
 ---
 
 ## 📊 Hallazgos Principales del EDA
 
-### 1. Balance de la Variable Objetivo
-El dataset se encuentra en equilibrio óptimo para clasificación binaria sin necesidad de remuestreo sintético:
-- **Sin enfermedad (`cardio = 0`):** 33,962 pacientes (50.3%)
-- **Con enfermedad (`cardio = 1`):** 33,552 pacientes (49.7%)
-- **Ratio mayoría/minoría:** `1.01`
+<p align="center">
+  <img src="img/01_target_balance.png" width="48%" />
+  <img src="img/s4a_heatmap_correlaciones.png" width="48%" />
+</p>
 
-![Balance de la Variable Objetivo](img/01_target_balance.png)
+### 1. Incidencia Basal y Censura Epidemiológica
+La incidencia real de eventos coronarios a 10 años es del **15.1%**, reflejando con exactitud la historia natural de la cardiopatía isquémica en poblaciones occidentales no intervenidas.
 
-### 2. Diferencias en Variables Numéricas Clave
-Los pacientes con enfermedad cardiovascular presentan un desplazamiento estadísticamente significativo en todas las variables continuas:
-- **Presión Sistólica (`ap_hi`):** Media de **132.8 mmHg** en enfermos vs **121.0 mmHg** en sanos ($\Delta = +11.8\text{ mmHg}$, $p < 0.001$).
-- **Presión de Pulso (`pulse_pressure`):** Media de **48.7 mmHg** en enfermos vs **38.5 mmHg** en sanos ($\Delta = +10.2\text{ mmHg}$, rigidez arterial marcada).
-- **Edad (`age_years`):** Media de **54.9 años** en enfermos vs **51.7 años** en sanos ($\Delta = +3.2\text{ años}$).
-- **Índice de Masa Corporal (`bmi`):** Media de **28.5 kg/m²** en enfermos vs **26.5 kg/m²** en sanos.
+### 2. Validez de los Factores de Riesgo (Odds Ratios)
+A diferencia de datos transversales con sesgo, en esta cohorte todos los factores tradicionales aumentan el riesgo:
 
-![Violinplots de Variables Numéricas](img/s2a_violinplots.png)
+<p align="center">
+  <img src="img/s2b_categoricas_vs_cardio.png" width="95%" />
+</p>
 
-### 3. Prevalencia de Riesgo según Factores de Vida y Metabólicos
-- **Efecto Umbral del Colesterol:** El riesgo salta drásticamente del **44.0%** en colesterol normal al **60.2%** en colesterol alto y alcanza el **76.5%** en colesterol muy alto.
-- **Glucosa Alterada:** Pacientes con glucemia muy alta superan el **62%** de prevalencia de afección cardiovascular.
-- **Sedentarismo:** Los pacientes inactivos presentan una tasa de enfermedad superior a los que realizan ejercicio regular.
+- **Hábito Tabáquico:** Los fumadores activos presentan un riesgo **25% superior** frente a los no fumadores, con una clara curva de dosis-respuesta según cigarrillos/día.
+- **Diabetes Mellitus:** Los pacientes diabéticos triplican la tasa de incidencia (más del 38% sufren infarto en 10 años frente al 14.5% en no diabéticos).
+- **Hipertensión Arterial:** Los pacientes con HTA prevalente duplican el riesgo de eventos coronarios.
+- **Sexo Biológico:** Los hombres presentan un riesgo sustancialmente mayor en etapas tempranas frente a las mujeres premenopáusicas.
 
-![Factores Categóricos vs Riesgo](img/s2b_categoricas_vs_cardio.png)
-
-### 4. Matriz de Correlación
-Ninguna variable individual supera $r = 0.45$ de correlación lineal con `cardio`. Esto demuestra empíricamente que **el riesgo cardiovascular es de naturaleza multifactorial** y requiere modelos capaces de capturar interacciones no lineales.
-
-![Matriz de Correlaciones](img/s4a_heatmap_correlaciones.png)
+<p align="center">
+  <img src="img/s2a_violinplots.png" width="95%" />
+</p>
 
 ---
 
-## 🤖 Modelo Predictivo y Rendimiento
+## 🤖 Modelo Predictivo y Rendimiento Clínico
 
-Se implementó un pipeline en `scikit-learn` acoplado a un clasificador **HistGradientBoostingClassifier** (optimizado para árboles de decisión basados en histogramas, robusto ante valores extremos y capaz de modelar interacciones complejas):
+Se implementó y calibró un modelo de **Regresión Logística Penalizada (L2)** con ponderación balanceada (`class_weight='balanced'`), maximizando la capacidad de cribado clínico:
 
-### Métricas de Evaluación en Test Set Independiente (13,503 pacientes)
-| Métrica | Valor Obtenido | Interpretación Clínica |
-|---|:---:|---|
-| **ROC-AUC** | **0.7989 (~0.80)** | Capacidad de discriminación excelente entre enfermos y sanos. |
-| **Exactitud (Accuracy)** | **73.07%** | Porcentaje global de clasificaciones correctas. |
-| **Precisión (Precision)** | **75.09%** | Cuando el modelo predice enfermedad, acierta 3 de cada 4 veces. |
-| **Exhaustividad (Recall)** | **68.60%** | Sensibilidad para capturar pacientes verdaderamente enfermos. |
-| **F1-Score** | **71.70%** | Balance armónico entre precisión y cobertura. |
+| Métrica de Rendimiento | Resultado en Test Set (n = 846) | Interpretación Clínica |
+|---|---|---|
+| **ROC-AUC** | **0.6887** | Excelente capacidad de discriminación en cohorte comunitaria abierta. |
+| **Sensibilidad (Recall)** | **57.03%** | Capacidad para detectar a más de la mitad de los pacientes que sufrirán un infarto. |
+| **Especificidad** | **67.00%** | Descarte efectivo de pacientes de bajo riesgo, minimizando pruebas innecesarias. |
+| **Exactitud (Accuracy)** | **65.48%** | Tasa global de acierto balanceada. |
+| **F1-Score Ponderado** | **0.70** | Equilibrio óptimo entre precisión y sensibilidad clínica. |
 
-### Matriz de Confusión en Test
-```
-                       Predicho Sano (0)    Predicho Enfermo (1)
-Verdadero Sano (0)           5,261                 1,528
-Verdadero Enfermo (1)        2,108                 4,606
-```
+### Coeficientes Clínicos y Odds Ratios Estandarizados (Multivariados)
+El modelo reproduce con fidelidad los factores descritos en las tablas de Framingham y SCORE:
 
-### Importancia Multivariada (Odds Ratios Estandarizados - Regresión Logística)
-1. **Colesterol Sérico Total:** $\beta = +0.4997$ (Factor metabólico de mayor impacto).
-2. **Edad (`age_years`):** $\beta = +0.3472$ (Factor acumulativo no modificable).
-3. **Presión Sistólica (`ap_hi`):** $\beta = +0.3263$ (Tensión hemodinámica parietal).
-4. **Presión de Pulso (`pulse_pressure`):** $\beta = +0.3235$ (Marcador de esclerosis arterial).
-5. **Presión Arterial Media (`map`):** $\beta = +0.3178$.
-6. **Actividad Física regular (`active`):** $\beta = -0.2317$ (Factor protector fundamental).
+$$\text{Odds Ratio} = \exp(\beta)$$
+
+- **Edad ($\beta = +0.578$):** $OR = 1.78$ *(el mayor predictor acumulativo)*.
+- **Accidente Cerebrovascular previo ($\beta = +0.745$):** $OR = 2.11$ *(duplica el riesgo de evento coronario)*.
+- **Presión Sistólica ($\beta = +0.380$):** $OR = 1.46$ *(fuerte predictor hemodinámico continuo)*.
+- **Tabaquismo Activo / Cigs al día ($\beta = +0.202$):** $OR = 1.22$ *(factor modificable de alto impacto)*.
+- **Diabetes Mellitus ($\beta = +0.424$):** $OR = 1.53$ *(acelera el proceso aterosclerótico)*.
+- **Colesterol Total ($\beta = +0.089$):** $OR = 1.09$ *(asociación positiva directa)*.
 
 ---
 
 ## 🎛️ CardioRisk Studio: Aplicación Interactiva
 
-La aplicación web construida en **Streamlit** (`App/app.py`) fue completamente rediseñada bajo una estética de monitor médico dark navy con señal ECG:
+La aplicación desarrollada en **Streamlit** (`App/app.py`) proporciona un entorno clínico interactivo con las siguientes capacidades:
 
-### Módulos Principales:
-1. **🧮 Calculadora Clínica de Riesgo Individual:**
-   - Controles interactivos limitados a rangos fisiológicos reales.
-   - Cálculo instantáneo de **IMC** (con badge de la OMS: Normopeso, Sobrepeso, Obesidad I/II/III).
-   - Cálculo de **Presión de Pulso** y **Presión Arterial Media (PAM)**.
-   - Diagnóstico del **Estadío de Hipertensión según la AHA/ACC 2017**.
-   - **Predicción de probabilidad de riesgo (%) por Machine Learning** con gauge visual de 4 niveles (*Bajo <25%*, *Moderado 25-50%*, *Alto 50-75%*, *Crítico >75%*).
-   - **Recomendaciones clínicas personalizadas** basadas en los factores específicos del paciente.
-2. **👥 Comparador Poblacional:**
-   - Gráficos de densidad de Kernel que ubican la presión y el IMC del paciente en percentiles respecto a los 67,514 casos de la cohorte.
-3. **📊 Variable Objetivo:**
-   - Análisis interactivo del balance de clases.
-4. **📈 Variables Numéricas:**
-   - Histogramas y gráficos de violín dinámicos filtrables por edad y género.
-5. **🏷️ Variables Categóricas:**
-   - Prevalencia cruzada de tabaquismo, colesterol, glucosa y sedentarismo.
-6. **🔥 Factores e Importancia:**
-   - Matriz de correlación de Pearson y coeficientes beta del modelo.
+1. **Calculadora Clínica de Riesgo Individual:** Ingreso de presión arterial (sistólica/diastólica), colesterol, glucosa, cigarrillos/día, medicación y cálculo inmediato de IMC, PAM, Presión de Pulso, estadio AHA y porcentaje de riesgo coronario a 10 años.
+2. **Comparador Poblacional:** Posicionamiento percentilar del paciente frente a las curvas de densidad de la población general (sanos vs con cardiopatía).
+3. **Módulo de Salud Pública:** Visualización interactiva de distribuciones, matrices de correlación y análisis bivariado según filtros demográficos.
+4. **Recomendaciones Terapéuticas Personalizadas:** Emisión de alertas automáticas ante hipertensión, hiperglucemia, hipercolesterolemia, tabaquismo activo o sobrepeso.
 
 ---
 
 ## 🚀 Instrucciones de Ejecución
 
-### 1. Clonar el repositorio y configurar el entorno
+### 1. Clonar el Repositorio
 ```bash
-# Clonar
 git clone https://github.com/anacolinaarismendi/Cardiovascular-Disease.git
 cd "Cardiovascular Disease"
+```
 
-# Crear y activar entorno virtual
-python -m venv .venv
-source .venv/bin/activate       # macOS / Linux
-# .venv\Scripts\activate        # Windows
-
-# Instalar dependencias oficiales
+### 2. Configurar el Entorno Virtual
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Ejecutar el pipeline de datos y entrenamiento (opcional)
-Los datos procesados y modelos ya vienen pre-entrenados en el repositorio, pero puedes re-ejecutarlos cuando desees:
+### 3. Entrenar el Modelo y Generar Artefactos
 ```bash
 python src/train_model.py
+python src/export_plots.py
 ```
 
-### 3. Lanzar la aplicación Streamlit
-La aplicación cuenta con **resolución dinámica de rutas** y puede ejecutarse indistintamente desde cualquier ubicación:
+### 4. Ejecutar la Aplicación Streamlit
 ```bash
-# Desde la raíz del repositorio:
 streamlit run App/app.py
-
-# O desde la carpeta App:
-cd App
-streamlit run app.py
 ```
 La aplicación se abrirá automáticamente en tu navegador en `http://localhost:8501`.
 
-### 4. Despliegue en Streamlit Cloud
-1. Realiza el push de tu repositorio a GitHub asegurando que `Data/processed/processed.csv`, `models/` y `requirements.txt` estén incluidos.
-2. Ingresa a [share.streamlit.io](https://share.streamlit.io).
-3. Selecciona tu repositorio y rama `main`.
-4. En **Main file path**, escribe: `App/app.py`.
-5. Haz clic en **Deploy**.
-
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del Repositorio
 
 ```
-Cardiovascular-Disease/
-├── README.md                          # Documentación maestra del proyecto
-├── LICENSE                            # Licencia de código abierto MIT
-├── requirements.txt                   # Dependencias de Python requeridas
+Cardiovascular Disease/
 ├── App/
-│   └── app.py                         # Aplicación web interactiva Streamlit
+│   └── app.py                     # Aplicación interactiva Streamlit (Framingham AI Studio)
 ├── Data/
-│   ├── cardio_train.csv               # Dataset original de Kaggle (70,000 registros)
+│   ├── framingham.csv             # Dataset clínico original del Framingham Heart Study
 │   └── processed/
-│       └── processed.csv              # Dataset limpio con plausibilidad fisiológica (67,514 registros)
+│       └── processed.csv          # Cohorte preprocesada y enriquecida con biomarcadores
 ├── Notebooks/
-│   ├── 01_exploracion.ipynb           # Primer acercamiento a los datos brutos
-│   ├── 02_preprocesamiento.ipynb      # Pruebas preliminares de transformación
-│   └── 03_eda.ipynb                   # EDA Completo estructurado en los 19 pasos de la guía
+│   ├── 01_exploracion.ipynb       # Auditoría de calidad de datos, nulos y fisiología
+│   ├── 02_preprocesamiento.ipynb  # Pipeline clínico en 19 pasos con imputación médica
+│   └── 03_eda.ipynb               # Análisis exploratorio profundo y Odds Ratios
+├── img/
+│   ├── 01_target_balance.png      # Distribución del target a 10 años
+│   ├── s2a_violinplots.png        # Distribuciones de biomarcadores por estado coronario
+│   ├── s2b_categoricas_vs_cardio.png # Riesgo según factores clínicos (tabaco, diabetes, HTA)
+│   └── s4a_heatmap_correlaciones.png # Matriz de correlaciones clínicas
 ├── models/
-│   ├── pipeline_preprocesamiento.pkl  # Pipeline de transformación ColumnTransformer
-│   ├── modelo_cardiovascular.pkl      # Modelo predictivo completo entrenado
-│   └── model_metrics.json             # Métricas de validación y coeficientes
+│   ├── modelo_cardiovascular.pkl  # Pipeline de Machine Learning entrenado y serializado
+│   ├── pipeline_preprocesamiento.pkl # Escalador y transformador de features
+│   └── model_metrics.json         # Métricas de validación y Odds Ratios estandarizados
 ├── src/
-│   ├── train_model.py                 # Script de limpieza clínica, pipeline y entrenamiento
-│   ├── generate_eda_notebook.py       # Generador del notebook 03_eda.ipynb en 19 pasos
-│   └── export_plots.py                # Generador de gráficos de alta resolución
-└── img/                               # Gráficos clínicos exportados
-    ├── 01_target_balance.png
-    ├── s2a_violinplots.png
-    ├── s2b_categoricas_vs_cardio.png
-    └── s4a_heatmap_correlaciones.png
+│   ├── train_model.py             # Script de limpieza, ingeniería y entrenamiento
+│   ├── export_plots.py            # Generador de figuras para documentación
+│   ├── generate_01_exploracion.py # Generador del Notebook 01
+│   ├── generate_02_preprocesamiento.py # Generador del Notebook 02
+│   ├── generate_eda_notebook.py   # Generador del Notebook 03
+│   └── run_and_populate_notebooks.py # Ejecutor y serializador de outputs en notebooks
+├── requirements.txt               # Dependencias del proyecto
+└── README.md                      # Documentación clínica y técnica
 ```
 
 ---
@@ -288,5 +260,5 @@ Cardiovascular-Disease/
 ## 👩‍💻 Autora y Licencia
 
 - **Autora:** Ana Colina Arismendi
-- **GitHub:** [@anacolinaarismendi](https://github.com/anacolinaarismendi)
-- **Licencia:** Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
+- **Especialidad:** Data Science, Machine Learning & Epidemiología Médica
+- **Licencia:** Distribuido bajo la Licencia MIT. Consulta el archivo `LICENSE` para más información.

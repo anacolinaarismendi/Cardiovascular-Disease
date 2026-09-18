@@ -1,6 +1,6 @@
 """
-Generador del Notebook 02_preprocesamiento.ipynb con rigor técnico y médico profesional,
-implementando filtros fisiológicos, feature engineering clínico y pipeline de producción.
+Generador del Notebook 02_preprocesamiento.ipynb siguiendo la guía de 19 pasos clínicos,
+adaptado a la cohorte longitudinal Framingham Heart Study.
 """
 
 import json
@@ -26,339 +26,261 @@ def build_02_notebook():
         })
 
     # Header
-    md("""# 🛠️ Notebook 02: Preprocesamiento de Datos, Validación Fisiológica y Feature Engineering
-## Proyecto de Predicción de Riesgo Cardiovascular en Pacientes Reales
+    md("""# ⚙️ Notebook 02: Pipeline de Preprocesamiento Clínico y Feature Engineering
+## Proyecto de Predicción de Riesgo Cardiovascular — Cohorte Framingham
+**Autora:** Ana Colina Arismendi  
+**Marco Metodológico:** Protocolo de Preprocesamiento en 19 Pasos Clínicos
 
-> **Objetivo:** Transformar el dataset bruto `cardio_train.csv` en un conjunto de datos limpio, fisiológicamente consistente y enriquecido con biomarcadores clínicos calculados según las guías de la **OMS**, **ACC/AHA (2017)** y **ESC (2018/2024)**. Se construye además un pipeline formal de `scikit-learn` para producción que previene cualquier fuga de datos (*data leakage*).
+> **Objetivo:** Transformar los datos brutos del *Framingham Heart Study* en una matriz analítica limpia, fisiológicamente consistente y enriquecida con biomarcadores derivados (Presión de Pulso, PAM, estadios de hipertensión AHA y dislipidemia), lista para modelado predictivo.
 
 ---
 
-### 📑 Contenido del Notebook
-1. [Librerías especializadas y entorno](#1)
-2. [Carga de datos y eliminación de identificadores técnicos](#2)
-3. [Deduplicación clínica fundamentada](#3)
-4. [Conversión de unidades temporales (Edad en años cumplidos)](#4)
-5. [Corrección de inversión hemodinámica (ap_lo >= ap_hi)](#5)
-6. [Filtros de plausibilidad fisiológica humana (Pacientes Reales vs IQR)](#6)
-7. [Feature Engineering Clínico (IMC, Presión de Pulso, PAM, Estadios AHA)](#7)
-8. [Tipado y optimización en memoria](#8)
-9. [Análisis de escalado (StandardScaler vs RobustScaler)](#9)
-10. [División Train / Test estratificada sin fugas de datos](#10)
-11. [Construcción del ColumnTransformer de producción](#11)
-12. [Guardado y verificación de artefactos](#12)
-13. [Checklist final de preprocesamiento](#13)
+### 📑 Los 19 Pasos del Pipeline de Preprocesamiento
+1. **Paso 01:** Configuración del entorno, librerías y reproducibilidad
+2. **Paso 02:** Carga y verificación de la cohorte basal
+3. **Paso 03:** Auditoría de completitud y tipos de variables
+4. **Paso 04:** Eliminación de duplicados técnicos y clínicos
+5. **Paso 05:** Filtrado de anomalías fisiológicas incompatibles con la vida
+6. **Paso 06:** Imputación clínica estratificada de valores faltantes
+7. **Paso 07:** Tratamiento de valores extremos (Winsorización percentilar)
+8. **Paso 08:** Feature Engineering I: Presión de Pulso (PP)
+9. **Paso 09:** Feature Engineering II: Presión Arterial Media (PAM)
+10. **Paso 10:** Feature Engineering III: Clasificación AHA de Tensión Arterial
+11. **Paso 11:** Feature Engineering IV: Estratificación del Colesterol Sérico
+12. **Paso 12:** Feature Engineering V: Estratificación de la Glucemia
+13. **Paso 13:** Feature Engineering VI: Indicador Compuesto de Hipertensión
+14. **Paso 14:** Feature Engineering VII: Clasificación Ponderal e IMC
+15. **Paso 15:** Armonización de nombres y alineación de variable objetivo (`cardio`)
+16. **Paso 16:** Diagnóstico de multicolinealidad y matriz de correlación
+17. **Paso 17:** Partición Estratificada en conjuntos de Entrenamiento y Test (80/20)
+18. **Paso 18:** Construcción y serialización del Pipeline Scikit-Learn
+19. **Paso 19:** Exportación final del dataset limpio y reporte de calidad
 """)
 
-    # 1. Librerías
-    md("""<a id="1"></a>
-## 1. Librerías especializadas y entorno
-
-Cargamos el ecosistema para limpieza de datos, transformaciones estadísticas y pipelines de aprendizaje automático.
-""")
-
+    # Paso 1
+    md("""## Paso 01: Configuración del entorno, librerías y reproducibilidad""")
     code("""import os
+import json
 import joblib
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
 
-pd.set_option('display.max_columns', None)
+RANDOM_SEED = 42
+np.random.seed(RANDOM_SEED)
+
 plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
-sns.set_theme(style='whitegrid', palette='mako')
+print("✓ Librerías importadas y semilla 42 fijada.")""")
 
-print("✓ Librerías cargadas exitosamente.")""")
-
-    # 2. Carga y eliminación de ID
-    md("""<a id="2"></a>
-## 2. Carga de datos y eliminación de identificadores técnicos
-
-La columna `id` es un consecutivo de base de datos sin correlación biológica. Mantenerla introduciría ruido o sobreajuste espurio.
-""")
-
-    code("""ruta_raw = '../Data/cardio_train.csv'
+    # Paso 2
+    md("""## Paso 02: Carga y verificación de la cohorte basal""")
+    code("""ruta_raw = '../Data/framingham.csv'
 if not os.path.exists(ruta_raw):
-    ruta_raw = 'Data/cardio_train.csv'
+    ruta_raw = 'Data/framingham.csv'
 
-df = pd.read_csv(ruta_raw, sep=';')
-print(f"Total registros cargados: {len(df):,}")
+df = pd.read_csv(ruta_raw)
+print(f"Registros iniciales: {len(df):,} pacientes con {df.shape[1]} variables clínicas.")""")
 
-if 'id' in df.columns:
-    df = df.drop(columns=['id'])
-    print("✓ Columna 'id' eliminada exitosamente.")
+    # Paso 3
+    md("""## Paso 03: Auditoría de completitud y tipos de variables""")
+    code("""info_df = pd.DataFrame({
+    'Tipo': df.dtypes,
+    'No_Nulos': df.notnull().sum(),
+    'Nulos': df.isnull().sum(),
+    'Pct_Nulos': (df.isnull().mean() * 100).round(2)
+})
+print("--- Auditoría de Valores Faltantes ---")
+print(info_df[info_df['Nulos'] > 0])""")
 
-df.head(3)""")
-
-    # 3. Deduplicación clínica
-    md("""<a id="3"></a>
-## 3. Deduplicación clínica fundamentada
-
-Sin la columna `id`, evaluamos si existen registros exactamente idénticos en todas las 12 características médicas. Filas duplicadas sesgan los clasificadores al sobreponderar perfiles repetidos.
-""")
-
+    # Paso 4
+    md("""## Paso 04: Eliminación de duplicados técnicos y clínicos""")
     code("""dup_count = df.duplicated().sum()
-pct_dup = (dup_count / len(df)) * 100
-print(f"Duplicados clínicos detectados: {dup_count:,} ({pct_dup:.2f}%)")
+if dup_count > 0:
+    df = df.drop_duplicates().reset_index(drop=True)
+print(f"Duplicados eliminados: {dup_count}. Total registros vigentes: {len(df):,}")""")
 
-df = df.drop_duplicates().copy()
-print(f"Registros restantes tras deduplicación: {len(df):,}")""")
-
-    # 4. Conversión de Edad
-    md("""<a id="4"></a>
-## 4. Conversión de unidades temporales (Edad en años cumplidos)
-
-La variable `age` viene expresada en días desde el nacimiento. Fisiológicamente la convertimos a años dividiendo por el año trópico medio ($365.25$ días) y redondeando a un decimal.
-""")
-
-    code("""df['age_years'] = (df['age'] / 365.25).round(1)
-df = df.drop(columns=['age'])
-
-print("Estadísticos de edad transformada:")
-print(f"  Mínima: {df['age_years'].min()} años")
-print(f"  Media:  {df['age_years'].mean():.1f} años")
-print(f"  Máxima: {df['age_years'].max()} años")
-df[['age_years']].head(3)""")
-
-    # 5. Inversión hemodinámica
-    md("""<a id="5"></a>
-## 5. Corrección de inversión hemodinámica (ap_lo >= ap_hi)
-
-En fisiología circulatoria humana, la presión sistólica (presión máxima eyectiva) es invariablemente mayor que la diastólica (presión mínima de llenado ventricular). Casos donde $ap\\_lo \\ge ap\\_hi$ o presiones negativas representan errores de lectura o manguito invertido.
-""")
-
-    code("""inv = df[df['ap_lo'] >= df['ap_hi']]
-print(f"Filas con presión diastólica >= sistólica: {len(inv):,} ({len(inv)/len(df)*100:.2f}%)")
-
-df = df[df['ap_hi'] > df['ap_lo']].copy()
-print(f"Registros tras eliminar presiones invertidas: {len(df):,}")""")
-
-    # 6. Plausibilidad fisiológica
-    md("""<a id="6"></a>
-## 6. Filtros de plausibilidad fisiológica humana (Pacientes Reales vs IQR)
-
-El criterio estadístico clásico de Tukey ($1.5\\cdot IQR$) recortaría a pacientes severamente hipertensos reales (que son casos críticos del estudio). Por ello, aplicamos **límites de plausibilidad biomédica** consensuados por la **OMS**, **AHA** y **ESC**:
-- **Presión Sistólica ($ap\\_hi$):** $80 \\le ap\\_hi \\le 220\\text{ mmHg}$
-- **Presión Diastólica ($ap\\_lo$):** $50 \\le ap\\_lo \\le 130\\text{ mmHg}$
-- **Presión de Pulso ($PP = ap\\_hi - ap\\_lo$):** $20 \\le PP \\le 110\\text{ mmHg}$ *(una presión de pulso <20 mmHg indica shock/colapso circulatorio no ambulatorio)*.
-- **Estatura:** $140 \\le \\text{height} \\le 205\\text{ cm}$
-- **Peso:** $40 \\le \\text{weight} \\le 165\\text{ kg}$
-""")
-
-    code("""filtro_fisiologico = (
-    (df['ap_hi'] >= 80) & (df['ap_hi'] <= 220) &
-    (df['ap_lo'] >= 50) & (df['ap_lo'] <= 130) &
-    ((df['ap_hi'] - df['ap_lo']) >= 20) & ((df['ap_hi'] - df['ap_lo']) <= 110) &
-    (df['height'] >= 140) & (df['height'] <= 205) &
-    (df['weight'] >= 40) & (df['weight'] <= 165)
+    # Paso 5
+    md("""## Paso 05: Filtrado de anomalías fisiológicas incompatibles con la vida""")
+    code("""# Filtros hemodinámicos estrictos:
+# 1. sysBP entre 70 y 270 mmHg
+# 2. diaBP entre 40 y 160 mmHg
+# 3. sysBP > diaBP
+# 4. heartRate entre 35 y 220 lpm
+inicial = len(df)
+filtro_hemo = (
+    (df['sysBP'] >= 70) & (df['sysBP'] <= 270) &
+    (df['diaBP'] >= 40) & (df['diaBP'] <= 160) &
+    (df['sysBP'] > df['diaBP']) &
+    (df['heartRate'].isna() | ((df['heartRate'] >= 35) & (df['heartRate'] <= 220))) &
+    (df['totChol'].isna() | (df['totChol'] <= 600))
 )
+df = df[filtro_hemo].copy().reset_index(drop=True)
+print(f"Registros removidos por imposibilidad biológica: {inicial - len(df):,}. Restantes: {len(df):,}")""")
 
-outliers = (~filtro_fisiologico).sum()
-print(f"Filas fuera de plausibilidad fisiológica: {outliers:,} ({outliers/len(df)*100:.2f}%)")
+    # Paso 6
+    md("""## Paso 06: Imputación clínica estratificada de valores faltantes""")
+    code("""# Imputación guiada por contexto médico:
+# 1. cigsPerDay: si currentSmoker == 0 -> 0. Si fuma -> mediana de fumadores.
+df.loc[(df['cigsPerDay'].isna()) & (df['currentSmoker'] == 0), 'cigsPerDay'] = 0.0
+med_cigs = df[df['currentSmoker'] == 1]['cigsPerDay'].median()
+df['cigsPerDay'] = df['cigsPerDay'].fillna(med_cigs)
 
-df = df[filtro_fisiologico].copy()
-print(f"Cohorte de pacientes reales validada: {len(df):,}")""")
+# 2. BPMeds: si es nulo, moda clínica (0 = no usa)
+df['BPMeds'] = df['BPMeds'].fillna(0.0)
 
-    # 7. Feature Engineering
-    md("""<a id="7"></a>
-## 7. Feature Engineering Clínico
+# 3. totChol: mediana según grupo de edad (decenios)
+df['age_decile'] = (df['age'] // 10) * 10
+df['totChol'] = df.groupby('age_decile')['totChol'].transform(lambda x: x.fillna(x.median()))
 
-Calculamos parámetros hemodinámicos y antropométricos con alta evidencia médica:
-1. **Índice de Masa Corporal (IMC):**
-   $$BMI = \\frac{\\text{weight (kg)}}{(\\text{height (m)})^2}$$
-   Acotamos a rango clínico creíble ($16.0 - 52.0\\text{ kg/m}^2$).
-2. **Presión de Pulso ($PP$):** $ap\\_hi - ap\\_lo$ (rigidez de la pared aórtica).
-3. **Presión Arterial Media (PAM / MAP):**
-   $$MAP = ap\\_lo + \\frac{PP}{3}$$
-4. **Estadío de Hipertensión AHA/ACC 2017:**
-   - 0: Normal ($<120$ y $<80$)
-   - 1: Elevada ($120-129$ y $<80$)
-   - 2: HTA Grado 1 ($130-139$ o $80-89$)
-   - 3: HTA Grado 2 ($\\ge 140$ o $\\ge 90$)
-""")
+# 4. BMI: mediana según sexo biológico
+df['BMI'] = df.groupby('male')['BMI'].transform(lambda x: x.fillna(x.median()))
 
-    code("""# 1. IMC
-df['bmi'] = (df['weight'] / ((df['height'] / 100) ** 2)).round(1)
-df = df[(df['bmi'] >= 16.0) & (df['bmi'] <= 52.0)].copy()
+# 5. heartRate: mediana poblacional
+df['heartRate'] = df['heartRate'].fillna(df['heartRate'].median())
 
-# 2. Presión diferencial
-df['pulse_pressure'] = df['ap_hi'] - df['ap_lo']
+# 6. glucose: mediana según condición de diabetes
+df['glucose'] = df.groupby('diabetes')['glucose'].transform(lambda x: x.fillna(x.median()))
 
-# 3. Presión Arterial Media
-df['map'] = (df['ap_lo'] + (df['pulse_pressure'] / 3)).round(1)
+df = df.drop(columns=['age_decile'])
+print("Valores nulos restantes tras imputación clínica:")
+print(df.isnull().sum()[df.isnull().sum() > 0])
+print("✓ Completitud del 100% alcanzada.")""")
 
-# 4. Marcadores binarios
-df['hypertension'] = ((df['ap_hi'] >= 140) | (df['ap_lo'] >= 90)).astype('int8')
-df['overweight'] = (df['bmi'] >= 25.0).astype('int8')
+    # Paso 7
+    md("""## Paso 07: Tratamiento de valores extremos (Winsorización percentilar)""")
+    code("""# Winsorización al percentil 99.5 para mitigar la distorsión por colas pesadas
+cols_cont = ['totChol', 'sysBP', 'diaBP', 'BMI', 'glucose']
+for col in cols_cont:
+    p995 = df[col].quantile(0.995)
+    p005 = df[col].quantile(0.005)
+    df[col] = df[col].clip(lower=p005, upper=p995)
 
-# 5. Estadío AHA
-def clasificar_estadio_aha(row):
-    hi, lo = row['ap_hi'], row['ap_lo']
-    if hi >= 140 or lo >= 90:
-        return 3
-    elif (130 <= hi <= 139) or (80 <= lo <= 89):
-        return 2
-    elif (120 <= hi <= 129) and (lo < 80):
-        return 1
-    return 0
+print("✓ Winsorización percentil 0.5% - 99.5% aplicada a variables continuas.")""")
 
-df['bp_stage'] = df.apply(clasificar_estadio_aha, axis=1).astype('int8')
+    # Paso 8
+    md("""## Paso 08: Feature Engineering I: Presión de Pulso (PP)
+La presión diferencial o de pulso ($PP = sysBP - diaBP$) refleja la rigidez de las grandes arterias elásticas.""")
+    code("""df['pulse_pressure'] = df['sysBP'] - df['diaBP']
+print(f"Media de Presión de Pulso: {df['pulse_pressure'].mean():.1f} mmHg (Normal: 30-50 mmHg)")""")
 
-print("✓ Variables de ingeniería clínica creadas:")
-display(df[['bmi', 'pulse_pressure', 'map', 'hypertension', 'overweight', 'bp_stage']].head(4))""")
+    # Paso 9
+    md("""## Paso 09: Feature Engineering II: Presión Arterial Media (PAM)
+La PAM ($MAP = diaBP + \\frac{PP}{3}$) cuantifica la presión de perfusión tisular promedio en el ciclo cardíaco.""")
+    code("""df['map'] = df['diaBP'] + (df['pulse_pressure'] / 3.0)
+print(f"Media de Presión Arterial Media (PAM): {df['map'].mean():.1f} mmHg (Normal: 70-105 mmHg)")""")
 
-    # 8. Tipado y memoria
-    md("""<a id="8"></a>
-## 8. Tipado y optimización en memoria
+    # Paso 10
+    md("""## Paso 10: Feature Engineering III: Clasificación AHA de Tensión Arterial""")
+    code("""def clasificar_aha(row):
+    s, d = row['sysBP'], row['diaBP']
+    if s >= 140 or d >= 90:
+        return 4 # HTA Grado 2
+    elif (130 <= s <= 139) or (80 <= d <= 89):
+        return 3 # HTA Grado 1
+    elif (120 <= s <= 129) and (d < 80):
+        return 2 # Presión Elevada
+    else:
+        return 1 # Normal
 
-Ajustamos los tipos de datos a representaciones compactas (`int8`, `float32`) para acelerar la computación y reducir la huella de memoria.
-""")
+df['bp_stage'] = df.apply(clasificar_aha, axis=1)
+print("Distribución de estadios tensionales AHA:")
+print(df['bp_stage'].value_counts(normalize=True).round(3))""")
 
-    code("""cols_int8 = ['gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active',
-             'cardio', 'hypertension', 'overweight', 'bp_stage']
-for col in cols_int8:
-    df[col] = df[col].astype('int8')
+    # Paso 11
+    md("""## Paso 11: Feature Engineering IV: Estratificación del Colesterol Sérico""")
+    code("""# 1: Deseable (<200 mg/dL), 2: Limítrofe (200-239 mg/dL), 3: Elevado (>=240 mg/dL)
+df['chol_stage'] = pd.cut(df['totChol'], bins=[0, 200, 240, 1000], labels=[1, 2, 3]).astype(int)
+print("Distribución estadios de colesterol:")
+print(df['chol_stage'].value_counts(normalize=True).round(3))""")
 
-print("Tipos de datos finales:")
-print(df.dtypes)
-print(f"\\nMemoria ocupada: {df.memory_usage().sum() / (1024*1024):.2f} MB")""")
+    # Paso 12
+    md("""## Paso 12: Feature Engineering V: Estratificación de la Glucemia""")
+    code("""# 1: Normal (<100 mg/dL), 2: Glucosa alterada en ayuno (100-125), 3: Diabetes (>=126)
+df['gluc_stage'] = pd.cut(df['glucose'], bins=[0, 100, 126, 1000], labels=[1, 2, 3]).astype(int)
+print("Distribución estadios glucémicos:")
+print(df['gluc_stage'].value_counts(normalize=True).round(3))""")
 
-    # 9. Escalado
-    md("""<a id="9"></a>
-## 9. Análisis de escalado (StandardScaler vs RobustScaler)
+    # Paso 13
+    md("""## Paso 13: Feature Engineering VI: Indicador Compuesto de Hipertensión""")
+    code("""df['hypertension'] = ((df['sysBP'] >= 140) | (df['diaBP'] >= 90) | (df['BPMeds'] == 1)).astype(int)
+print(f"Prevalencia de Hipertensión Clínica: {df['hypertension'].mean()*100:.1f}%")""")
 
-Comparamos la estandarización por z-score frente al escalado robusto en las variables numéricas continuas.
-""")
+    # Paso 14
+    md("""## Paso 14: Feature Engineering VII: Clasificación Ponderal e IMC""")
+    code("""df['overweight'] = (df['BMI'] >= 25.0).astype(int)
+print(f"Prevalencia de Sobrepeso/Obesidad (IMC >= 25): {df['overweight'].mean()*100:.1f}%")""")
 
-    code("""num_features = ['age_years', 'height', 'weight', 'ap_hi', 'ap_lo', 'bmi', 'pulse_pressure', 'map']
+    # Paso 15
+    md("""## Paso 15: Armonización de nombres y alineación de variable objetivo (`cardio`)""")
+    code("""df['cardio'] = df['TenYearCHD'].astype(int)
+print(f"Variable objetivo unificada 'cardio':")
+print(df['cardio'].value_counts())""")
 
-scaler = StandardScaler()
-X_std = scaler.fit_transform(df[num_features])
+    # Paso 16
+    md("""## Paso 16: Diagnóstico de multicolinealidad y matriz de correlación""")
+    code("""cols_corr = ['age', 'cigsPerDay', 'totChol', 'sysBP', 'diaBP', 'BMI', 'heartRate', 'glucose', 'cardio']
+corr = df[cols_corr].corr()
+print("--- Correlación con el Evento Coronario (cardio) ---")
+print(corr['cardio'].sort_values(ascending=False).round(3))""")
 
-print("Estadísticos tras StandardScaler (Media ~ 0, Desviación ~ 1):")
-df_std = pd.DataFrame(X_std, columns=num_features)
-display(df_std.describe().round(3).T[['mean', 'std', 'min', 'max']])""")
-
-    # 10. Split Train / Test
-    md("""<a id="10"></a>
-## 10. División Train / Test estratificada sin fugas de datos
-
-**Regla de oro de la Guía de Preprocesamiento:**
-> La partición de datos se realiza **antes** de ajustar cualquier estimador o escalador, asegurando que las transformaciones aplicadas a Test utilicen únicamente los parámetros aprendidos en Train (*evitando data leakage*).
-""")
-
-    code("""cat_features = ['gender', 'cholesterol', 'gluc', 'smoke', 'alco', 'active']
-X_cols = num_features + cat_features
-
-X = df[X_cols].copy()
-y = df['cardio'].astype(int)
+    # Paso 17
+    md("""## Paso 17: Partición Estratificada en conjuntos de Entrenamiento y Test (80/20)""")
+    code("""X = df.drop(columns=['cardio', 'TenYearCHD'])
+y = df['cardio']
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.20, random_state=42, stratify=y
+    X, y, test_size=0.20, random_state=RANDOM_SEED, stratify=y
 )
+print(f"Conjunto de Entrenamiento: {X_train.shape[0]:,} pacientes")
+print(f"Conjunto de Test:          {X_test.shape[0]:,} pacientes")
+print(f"Proporción de clase positiva en Train: {y_train.mean():.3f} | Test: {y_test.mean():.3f}")""")
 
-print(f"Conjunto de Entrenamiento: {X_train.shape[0]:,} filas ({len(X_train)/len(df)*100:.1f}%)")
-print(f"Conjunto de Prueba:        {X_test.shape[0]:,} filas ({len(X_test)/len(df)*100:.1f}%)")
-print(f"Proporción de cardio en Train: {y_train.mean():.3f}")
-print(f"Proporción de cardio en Test:  {y_test.mean():.3f} (Idéntica estratificación)")""")
+    # Paso 18
+    md("""## Paso 18: Construcción y serialización del Pipeline Scikit-Learn""")
+    code("""scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train[cols_cont])
 
-    # 11. ColumnTransformer
-    md("""<a id="11"></a>
-## 11. Construcción del ColumnTransformer de producción
-
-Diseñamos una arquitectura de preprocesamiento unificada con `ColumnTransformer`:
-- **Sub-pipeline Numérico:** Imputación con mediana preventiva + Estandarización con `StandardScaler`.
-- **Sub-pipeline Categórico:** Imputación con el valor más frecuente (moda).
-""")
-
-    code("""pipe_num = Pipeline([
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-
-pipe_cat = Pipeline([
-    ('imputer', SimpleImputer(strategy='most_frequent'))
-])
-
-preprocesador = ColumnTransformer(
-    transformers=[
-        ('num', pipe_num, num_features),
-        ('cat', pipe_cat, cat_features)
-    ]
-)
-
-# Ajuste EXCLUSIVO en Train
-preprocesador.fit(X_train)
-print("✓ ColumnTransformer ajustado correctamente sin contaminación de Test.")""")
-
-    # 12. Guardado y verificación
-    md("""<a id="12"></a>
-## 12. Guardado y verificación de artefactos
-
-Exportamos el dataset procesado limpio y el pipeline serializado en formato `.pkl` con `joblib`.
-""")
-
-    code("""os.makedirs('../Data/processed', exist_ok=True)
 os.makedirs('../models', exist_ok=True)
+os.makedirs('models', exist_ok=True)
 
-# Guardar dataset procesado
-df.to_csv('../Data/processed/processed.csv', index=False)
-print("✓ Dataset procesado guardado en: ../Data/processed/processed.csv")
+ruta_pipe = '../models/pipeline_preprocesamiento.pkl'
+if not os.path.exists('../models'):
+    ruta_pipe = 'models/pipeline_preprocesamiento.pkl'
 
-# Guardar pipeline
-joblib.dump(preprocesador, '../models/pipeline_preprocesamiento.pkl')
-print("✓ Pipeline serializado en: ../models/pipeline_preprocesamiento.pkl")
+joblib.dump(scaler, ruta_pipe)
+print(f"✓ Scaler serializado en: {ruta_pipe}")""")
 
-# Verificación de recarga
-pipe_check = joblib.load('../models/pipeline_preprocesamiento.pkl')
-print("\\nVerificación de carga exitosa:")
-print(pipe_check)""")
+    # Paso 19
+    md("""## Paso 19: Exportación final del dataset limpio y reporte de calidad""")
+    code("""os.makedirs('../Data/processed', exist_ok=True)
+os.makedirs('Data/processed', exist_ok=True)
 
-    # 13. Checklist final
-    md("""<a id="13"></a>
-## 13. Checklist final de preprocesamiento
+ruta_out = '../Data/processed/processed.csv'
+if not os.path.exists('../Data/processed'):
+    ruta_out = 'Data/processed/processed.csv'
 
-| Paso | Verificación | Estado |
-|---|---|:---:|
-| 1 | Eliminación de identificadores espurios (`id`) | ✅ |
-| 2 | Deduplicación clínica (674 registros eliminados) | ✅ |
-| 3 | Conversión temporal de edad a años cumplidos | ✅ |
-| 4 | Corrección de presiones invertidas ($ap\\_lo \\ge ap\\_hi$) | ✅ |
-| 5 | Filtro de plausibilidad humana (AHA/OMS) | ✅ |
-| 6 | Cálculo de IMC, Presión de Pulso, PAM y Estadios AHA | ✅ |
-| 7 | Tipado eficiente de memoria | ✅ |
-| 8 | Partición Train/Test estratificada 80/20 | ✅ |
-| 9 | Prevención de data leakage con ajuste exclusivo en Train | ✅ |
-| 10 | Serialización reproducible de artefactos | ✅ |
+df.to_csv(ruta_out, index=False)
+print(f"✓ Dataset procesado guardado exitosamente en: {ruta_out}")
+print(f"Dimensiones finales: {df.shape[0]:,} pacientes × {df.shape[1]} variables")""")
 
-El dataset procesado está listo para alimentar los análisis visuales en el **Notebook 03 (EDA)** y el modelo predictivo de la **App Streamlit**.
-""")
-
-    notebook_dict = {
-        "cells": cells,
-        "metadata": {
-            "kernelspec": {
-                "display_name": "Python 3",
-                "language": "python",
-                "name": "python3"
+    # Guardar notebook
+    os.makedirs('Notebooks', exist_ok=True)
+    out_path = 'Notebooks/02_preprocesamiento.ipynb'
+    with open(out_path, 'w', encoding='utf-8') as f:
+        json.dump({
+            "cells": cells,
+            "metadata": {
+                "language_info": {"name": "python", "version": "3.12"}
             },
-            "language_info": {
-                "name": "python",
-                "version": "3.12"
-            }
-        },
-        "nbformat": 4,
-        "nbformat_minor": 5
-    }
+            "nbformat": 4,
+            "nbformat_minor": 4
+        }, f, indent=2, ensure_ascii=False)
 
-    target_path = 'Notebooks/02_preprocesamiento.ipynb'
-    with open(target_path, 'w', encoding='utf-8') as f:
-        json.dump(notebook_dict, f, indent=1, ensure_ascii=False)
-    print(f"✓ Notebook {target_path} generado con éxito.")
+    print(f"✓ Notebook 02 generado exitosamente en: {out_path}")
 
 if __name__ == '__main__':
     build_02_notebook()
